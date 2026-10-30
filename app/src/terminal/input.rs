@@ -17025,6 +17025,62 @@ impl View for Input {
         "Input"
     }
 
+    fn child_view_ids(&self, _app: &AppContext) -> Vec<EntityId> {
+        // Inline menus are only rendered while open, so they are absent from the
+        // render-time parent graph used to move a tab's subtree between windows. Without
+        // reporting them here they are orphaned in the source window when a tab is dragged
+        // to another window, leaving their handles pointing at a closed window and panicking
+        // on the next access.
+        let mut ids = vec![
+            self.editor.id(),
+            self.input_suggestions.id(),
+            self.voltron_view.id(),
+            self.universal_developer_input_button_bar.id(),
+            self.terminal_input_message_bar.id(),
+            self.agent_input_footer.id(),
+            self.prompt_suggestions_view.id(),
+            self.prompt_render_helper.prompt_view().id(),
+            self.inline_slash_commands_view.id(),
+            self.inline_conversation_menu_view.id(),
+            self.inline_plan_menu_view.id(),
+            self.inline_repos_menu_view.id(),
+            self.inline_model_selector_view.id(),
+            self.inline_profile_selector_view.id(),
+            self.inline_skill_selector_view.id(),
+            self.inline_prompts_menu_view.id(),
+            self.user_query_menu_view.id(),
+            self.rewind_menu_view.id(),
+            self.inline_history_menu_view.id(),
+            self.buy_credits_banner.id(),
+            self.agent_status_view.id(),
+        ];
+        if let Some(view) = &self.cloud_mode_v2_slash_commands_view {
+            ids.push(view.id());
+        }
+        if let Some(view) = &self.cloud_mode_v2_history_menu_view {
+            ids.push(view.id());
+        }
+        if let Some(view) = &self.queued_prompts_panel {
+            ids.push(view.id());
+        }
+        if let Some(state) = &self.ambient_agent_view_state {
+            ids.push(state.harness_selector.id());
+            if let Some(view) = &state.host_selector {
+                ids.push(view.id());
+            }
+            if let Some(view) = &state.auth_secret_selector {
+                ids.push(view.id());
+            }
+            if let Some(view) = &state.auth_secret_ftux_view {
+                ids.push(view.id());
+            }
+        }
+        if let Some(selected) = &self.workflows_state.selected_workflow_state {
+            ids.push(selected.more_info_view.id());
+        }
+        ids
+    }
+
     fn accessibility_contents(&self, _: &AppContext) -> Option<AccessibilityContent> {
         Some(AccessibilityContent::new(
             INPUT_A11Y_LABEL,

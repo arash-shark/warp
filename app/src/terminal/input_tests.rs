@@ -1511,6 +1511,45 @@ fn test_history_up() {
 }
 
 #[test]
+fn test_inline_history_menu_moves_with_input_between_windows() {
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+
+        let (window_a, terminal) =
+            add_window_with_bootstrapped_terminal_and_window_id(&mut app, None, None).await;
+        let (window_b, _other_terminal) =
+            add_window_with_bootstrapped_terminal_and_window_id(&mut app, None, None).await;
+
+        let input = terminal.read(&app, |view, _| view.input().clone());
+        let terminal_id = terminal.read(&app, |view, _| view.id());
+        let history_menu_view = input.read(&app, |input, _| input.inline_history_menu_view.clone());
+
+        input.read(&app, |input, ctx| {
+            assert!(input.inline_history_menu_view.try_as_ref(ctx).is_some());
+        });
+
+        app.update(|ctx| {
+            ctx.transfer_view_tree_to_window(terminal_id, window_a, window_b);
+        });
+
+        // The closed inline history menu is not part of the render-time parent graph, so it
+        // used to be left behind in the source window. Once that window closed, opening the
+        // menu and dispatching an edit panicked with "window does not exist".
+        input.read(&app, |input, ctx| {
+            assert!(
+                input.inline_history_menu_view.try_as_ref(ctx).is_some(),
+                "inline history menu should have moved with the input to the new window"
+            );
+        });
+        assert_eq!(
+            app.read(|ctx| history_menu_view.window_id(ctx)),
+            window_b,
+            "inline history menu should resolve to the target window"
+        );
+    });
+}
+
+#[test]
 fn test_history_up_buffer_restoration() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
